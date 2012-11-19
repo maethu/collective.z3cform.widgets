@@ -1,3 +1,4 @@
+from json import dumps
 import zope.component
 import zope.interface
 import zope.schema
@@ -9,6 +10,8 @@ from z3c.form.browser import textarea
 from zope.app.pagetemplate.viewpagetemplatefile import ViewPageTemplateFile
 
 from collective.z3cform.widgets.interfaces import ITokenInputWidget
+from zope.schema.interfaces import IChoice
+from zope.schema.vocabulary import getVocabularyRegistry
 
 
 class TokenInputWidget(textarea.TextAreaWidget):
@@ -31,26 +34,43 @@ class TokenInputWidget(textarea.TextAreaWidget):
     })(jQuery);
     """
 
+    def _get_old_values(self, vocab):
+        values = getattr(self.context, self.field.getName(), [])
+        result = []
+        if not vocab:
+            return result
+        for value in values:
+            term = vocab.getTermByToken(value)
+            if term:
+                result.append((term.token, term.value))
+        return result
+
     def js(self):
-        values = self.context.portal_catalog.uniqueValuesFor('Subject')
-        old_values = self.context.Subject()
-        tags = ""
-        old_tags = ""
+        value_type = self.field.value_type
+        vocab = None
+        if IChoice.providedBy(self.field.value_type):
+            if value_type.vocabulary:
+                vocab = value_type.vocabulary
+            if value_type.vocabularyName:
+                vocab = getVocabularyRegistry().get(
+                    self.context, self.field.value_type.vocabularyName)
+            values = [(term.token, term.value) for term in vocab]
+            old_values = self._get_old_values(vocab)
+        else:
+            values = enumerate(self.context.portal_catalog.uniqueValuesFor('Subject'))
+            old_values = enumerate(self.context.Subject())
+        tags = []
+        old_tags = []
         index = 0
-        for index, value in enumerate(values):
-            tags += "{id: '%s', name: '%s'}" % (value.replace("'", "\\'"), value.replace("'", "\\'"))
-            if index < len(values) - 1:
-                tags += ", "
-        old_index = 0  # XXX: this is not used
+        for index, value in values:
+            tags.append({'id': index, 'name': value})
         #prepopulate
-        for index, value in enumerate(old_values):
-            old_tags += u"{id: '%s', name: '%s'}" % (value.replace("'", "\\'"), value.replace("'", "\\'"))
-            if index < len(old_values) - 1:
-                old_tags += ", "
+        for index, value in old_values:
+            old_tags.append({'id': index, 'name': value})
         result = self.js_template % dict(id=self.id,
             klass=self.klass,
-            newtags=unicode(tags, errors='ignore'),
-            oldtags=old_tags)
+            newtags=dumps(tags),
+            oldtags=dumps(old_tags))
         return result
 
     def render(self):
