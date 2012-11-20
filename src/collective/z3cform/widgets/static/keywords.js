@@ -17,6 +17,7 @@ function keywordTokenInputActivate(id, newValues, oldValues) {
       prePopulate: oldValues
   });
 
+  console.info($("#token-input-"+id));
   $("#token-input-"+id).change(function(){
     var value = $(this).val();
     $("#"+id).tokenInput("add", {id: value, name: value});

@@ -509,6 +509,7 @@ $.TokenList = function (input, url_or_data, settings) {
             }
         }
 
+        console.info(item);
         // Insert the new tokens
         if(settings.tokenLimit == null || token_count < settings.tokenLimit) {
             insert_token(item);

@@ -1,4 +1,3 @@
-from json import dumps
 import zope.component
 import zope.interface
 import zope.schema
@@ -59,18 +58,23 @@ class TokenInputWidget(textarea.TextAreaWidget):
         else:
             values = enumerate(self.context.portal_catalog.uniqueValuesFor('Subject'))
             old_values = enumerate(self.context.Subject())
-        tags = []
-        old_tags = []
+        tags = ""
+        old_tags = ""
         index = 0
         for index, value in values:
-            tags.append({'id': index, 'name': value})
+            tags += "{id: '%s', name: '%s'}" % (value.replace("'", "\\'"), value.replace("'", "\\'"))
+            if values.index((index, value)) < len(values) - 1:
+                tags += ", "
+        old_index = 0  # XXX: this is not used
         #prepopulate
         for index, value in old_values:
-            old_tags.append({'id': index, 'name': value})
+            old_tags += u"{id: '%s', name: '%s'}" % (value.replace("'", "\\'"), value.replace("'", "\\'"))
+            if old_values.index((index, value)) < len(old_values) - 1:
+                old_tags += ", "
         result = self.js_template % dict(id=self.id,
             klass=self.klass,
-            newtags=dumps(tags),
-            oldtags=dumps(old_tags))
+            newtags=unicode(tags, errors='ignore'),
+            oldtags=old_tags)
         return result
 
     def render(self):
